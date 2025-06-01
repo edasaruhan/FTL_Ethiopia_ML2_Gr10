@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+waste_sorting_env/
+
+# Android
+android_app/.idea/
+android_app/build/
+android_app/*.iml
+android_app/local.properties
+
+# Datasets
+datasets/*
+!datasets/README.md
+
+# Miscellaneous
+*.log
+.DS_Store
