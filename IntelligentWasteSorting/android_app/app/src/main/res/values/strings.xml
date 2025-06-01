@@ -3,4 +3,10 @@
     <string name="classify_button">Classify Waste</string>
     <string name="classification_result">Result: %s</string>
     <string name="camera_permission_denied">Camera permission is required to classify waste.</string>
+    <string name="disposal_tip_paper">Paper: Recycle in the blue bin. Ensure it\'s clean and dry.</string>
+    <string name="disposal_tip_plastic">Plastic: Recycle in the yellow bin. Rinse containers to remove residue.</string>
+    <string name="disposal_tip_metal">Metal: Recycle in the yellow bin. Remove any non-metal parts.</string>
+    <string name="disposal_tip_glass">Glass: Recycle in the green bin. Separate by color if required.</string>
+    <string name="disposal_tip_cardboard">Cardboard: Recycle in the blue bin. Flatten boxes to save space.</string>
+    <string name="disposal_tip_trash">Trash: Dispose in the black bin. Avoid mixing with recyclables.</string>
 </resources>

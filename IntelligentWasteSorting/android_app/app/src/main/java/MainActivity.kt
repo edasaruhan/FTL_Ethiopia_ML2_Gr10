@@ -14,6 +14,11 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.analytics.ktx.analytics
+import com.google.firebase.analytics.ktx.logEvent
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 import org.tensorflow.lite.Interpreter
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -23,15 +28,18 @@ import android.graphics.Bitmap
 import android.graphics.ImageFormat
 import androidx.camera.core.ImageProxy
 import java.nio.MappedByteBuffer
-import java.nio.channels.FileChannel
 import java.io.FileInputStream
+import java.nio.channels.FileChannel
 
 class MainActivity : AppCompatActivity() {
     private lateinit var cameraExecutor: ExecutorService
     private lateinit var previewView: PreviewView
     private lateinit var classifyButton: Button
     private lateinit var resultText: TextView
+    private lateinit var disposalTipText: TextView
     private lateinit var tflite: Interpreter
+    private lateinit var firebaseAnalytics: FirebaseAnalytics
+    private val db = Firebase.firestore
     private val categories = listOf("paper", "plastic", "metal", "glass", "cardboard", "trash")
     private val CAMERA_REQUEST_CODE = 100
 
@@ -42,6 +50,10 @@ class MainActivity : AppCompatActivity() {
         previewView = findViewById(R.id.camera_preview)
         classifyButton = findViewById(R.id.classify_button)
         resultText = findViewById(R.id.result_text)
+        disposalTipText = findViewById(R.id.disposal_tip_text)
+
+        // Initialize Firebase Analytics
+        firebaseAnalytics = Firebase.analytics
 
         // Initialize TensorFlow Lite
         try {
@@ -68,8 +80,11 @@ class MainActivity : AppCompatActivity() {
 
         // Set up classify button
         classifyButton.setOnClickListener {
-            // Classification will be handled in ImageAnalysis
+            // Classification handled in ImageAnalysis
         }
+
+        // Check for model updates (example: store model version in Firestore)
+        checkModelUpdate()
     }
 
     private fun loadModelFile(): MappedByteBuffer {
@@ -118,6 +133,8 @@ class MainActivity : AppCompatActivity() {
             val result = classifyImage(bitmap)
             runOnUiThread {
                 resultText.text = getString(R.string.classification_result, result)
+                updateDisposalTip(result)
+                logClassificationEvent(result)
             }
         }
         imageProxy.close()
@@ -165,6 +182,43 @@ class MainActivity : AppCompatActivity() {
         // Get predicted class
         val maxIndex = output[0].indices.maxByOrNull { output[0][it] } ?: 0
         return categories[maxIndex]
+    }
+
+    private fun updateDisposalTip(category: String) {
+        val tipResId = when (category) {
+            "paper" -> R.string.disposal_tip_paper
+            "plastic" -> R.string.disposal_tip_plastic
+            "metal" -> R.string.disposal_tip_metal
+            "glass" -> R.string.disposal_tip_glass
+            "cardboard" -> R.string.disposal_tip_cardboard
+            "trash" -> R.string.disposal_tip_trash
+            else -> R.string.disposal_tip_trash
+        }
+        disposalTipText.text = getString(tipResId)
+    }
+
+    private fun logClassificationEvent(category: String) {
+        firebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_ITEM) {
+            param(FirebaseAnalytics.Param.ITEM_ID, category)
+            param(FirebaseAnalytics.Param.ITEM_NAME, "waste_classification")
+            param(FirebaseAnalytics.Param.CONTENT_TYPE, "classification_result")
+        }
+    }
+
+    private fun checkModelUpdate() {
+        // Example: Check Firestore for model version
+        db.collection("model_updates").document("current_version")
+            .get()
+            .addOnSuccessListener { document ->
+                if (document.exists()) {
+                    val version = document.getString("version") ?: "1.0"
+                    // In a real app, compare version and download new model if needed
+                    Toast.makeText(this, "Model version: $version", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .addOnFailureListener { e ->
+                Toast.makeText(this, "Failed to check model updates: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
     }
 
     override fun onRequestPermissionsResult(
